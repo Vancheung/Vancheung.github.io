@@ -382,4 +382,4 @@ _srcfile = os.path.normcase(logger.error.__code__.co_filename)
 
 ### 总结
 
-今日内容没什么技术含量，主要是费时间。
+今日内容没什么技术含量，主要是费时间，但这也是没有办法的事，摊手。
