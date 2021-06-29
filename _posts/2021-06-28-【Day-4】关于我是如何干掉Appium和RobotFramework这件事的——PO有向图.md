@@ -16,23 +16,29 @@ class UiClient:
     def __init__(self):
         self.client = wda.client()
 
-    def login(username,password):
+    def login(self,username,password):
         self.client.input(帐号输入框, username)
         self.client.input(密码输入框, password)
         self.client.click(登录)
 
 if __name__ == '__main__':
     ui = UiClient()
-    ui.login（'张三', 123456)
+    ui.login('张三', 123456)
 ```
 
-这样的登录操作其实隐含了一个前提：当前已经在登录页。在实际测试过程中，没办法保证前一次测试的环境清理成功完成，因此也引入了两个问题：
+这样的登录操作其实隐含了一个前提：当前已经在登录页。
 
-（1）打开APP时第一个页面不为登录页时，需要返回登录页
+而在实际测试过程中，没办法保证前一次测试的环境清理成功完成，因此也引入了如下状态：
 
-（2）对于已登录和未登录状态，返回登录页的路径不同。已登录时，需要先操作退出登录；
+（1）已登录状态，打开APP时第一个页面为行情页
 
-于是登录流程就会变成：
+（2）首次打开APP+未登录，为“选择登录方式”的登录页
+
+（3）非首次打开APP+未登录，为“可输入账号密码”的登录页
+
+（4）上一条测试用例环境清理失败，停留在任意页面
+
+简化版的流程如下（实际情况更复杂）：
 
 ```python
 def login(username,password):
@@ -57,9 +63,9 @@ def login(username,password):
 
 ### 二、优化方案一
 
-基于上述流程的初版优化方案：
+上述流程会引入多个问题，例如违背单一职责原则、调用链长易出错等。因此，做出第一版优化方案，主要针对方法的抽象。
 
-1、Action只属于LoginPage，跳转LoginPage在prepare_login_page中实现
+1、抽象 “进入登录页 ”部分，在prepare_login_page中实现。
 
 ```python
 def login_by_account(self,username,password):
@@ -84,7 +90,7 @@ def prepare_login_page(self):
         self.click('退出登录')
 ```
 
-2、抽象“其他页返回主页”到return_main_page()方法，主页->我的页->退出登录（可选）->登录页
+2、抽象 “其他页返回主页” ，在return_main_page()方法中实现，主页->我的页->退出登录（可选）->登录页
 
 ```python
 def prepare_login_page(self):        
@@ -106,9 +112,9 @@ def return_main_page():
     self.click('主页') # 简化流程
 ```
 
-这种抽象结构存在几个问题：
+但这种抽象结构仍未解决以下问题：
 
-（1）随着编写的页面增多，return_main_page方法会持续膨胀；
+（1）随着编写用例涉及到的页面增多，return_main_page方法会持续膨胀；
 
 （2）调用链会变得很长： 
 
@@ -118,19 +124,27 @@ def return_main_page():
 
 因此，需要尝试进一步优化的方案。
 
+
+
 ### 三、优化方案二
 
 [有向图](https://baike.baidu.com/item/有向图) 是一个经典的数据结构，如果把页面抽象成图的节点，页面跳转关系抽象为图的边，可以直接跳转的页面之间边的权重(weight)为1。则任意一个页面A到B的跳转路径，可以简化为：求节点A到节点B的最短路径。
 
-不支持在 Docs 外粘贴 block
+![image-20210628185721549](/assets/img/image-20210628185721549.png)
 
 例如下图，A->E的最短路径为A->C->E。求得最短路径之后，只需要按记录的Action列表依次操作，即可完成页面跳转。
 
-![image-20210628185721549](/assets/img/image-20210628185721549.png)
+![image-20210629162728965](/assets/img/image-20210629162728965.png)
 
-1、为实现这样的数据结构，首先定义一下BasePage，作为页面类的基类。
+1、为实现这样的数据结构，首先定义一个BasePage，作为页面类的基类。
 
-并需要定义一个必须实现的接口:is_page(). 另外，Page还应该是单例，不能重复初始化同一个页面。
+BasePage具有以下特性：
+
+（1）BasePage是抽象类，无法直接被实例化，其他PageObject都需要继承BasePage；
+
+（2）BasePage定义一组必须实现的接口（抽象方法），如is_page() 等；
+
+（3）通常BasePage的子类应该是单例，即不能重复初始化同一个页面。
 
 ```python
 class BasePage:
@@ -152,7 +166,19 @@ class BasePage:
         pass
 ```
 
-2、定义PageTree，在此使用networkx库的有向图DiGraph()
+2、定义PageTree，管理有向图相关的操作。在此使用networkx库的有向图DiGraph()。
+
+PageTree具有以下特性：
+
+（1）包含一个networkx.DiGraph()对象；
+
+（2）add_node方法，默认传入的节点名为str类型；支持传入其他属性；
+
+（3）add_turn方法，传入两个节点和一个跳转函数，为这两个节点添加一条边，默认weight为1；
+
+（4）get_func方法，获取两个节点间的最短路径，返回一个函数列表，列表内容为：这个最短路径中，每条边对应的函数
+
+（5）change_weight方法：修改一条边的权重。用于某些操作后，页面跳转关系发生变化的情况。
 
 ```python
 class PageTree:
@@ -187,6 +213,16 @@ class PageTree:
 
 3、定义一个Navigation类，管理所有页面跳转关系。
 
+Navigation具有以下特性：
+
+（1）导入所有PageObject；
+
+（2）_get_page：根据页面名称查找对应的PageObject；
+
+（3）handle_page：获取当前页。需要遍历PageObject的is_page()方法，page_map顺序对此会有影响；
+
+（4）navigate_to_page：页面跳转。依次执行PageTree.get_func中获取到的函数。
+
 ```python
 class Navigation:
     page_map = {
@@ -212,10 +248,6 @@ class Navigation:
         return self.page_map[page_name]
 
     def handle_page(self):
-        """
-        获取当前页
-        """
-
         if self.handle and self.handle.is_page():
             return self.handle
         for page in self.page_map:
@@ -224,10 +256,6 @@ class Navigation:
                 return self.handle
 
     def navigate_to_page(self, to_page_name: str):
-        """
-        页面跳转
-        """
-
         self.handle = self.handle_page()
         to_page = self._get_page(to_page_name)
         if self.handle is to_page:  # 都是单例，可以通过比较内存地址判断
@@ -261,11 +289,11 @@ class Navigation:
         self.page_tree.add_turn('YYY页', '主页', self._get_page(page_name='XXX页').return_main_page)
 ```
 
-对应的图如下：
+这个方法强依赖具体业务，对应的图如下：
 
 ![image-20210628190048281](/assets/img/image-20210628190048281.png)
 
-5、新的登录操作：
+5、新的登录操作-登录页面内完成：
 
 ```python
 class LoginPage(BasePage):
@@ -279,7 +307,7 @@ class LoginPage(BasePage):
         self.client.click(登录)
 ```
 
-带上跳转页之后的操作：
+新的登录操作-完整版，带上跳转页之后的操作：
 
 ```python
 class Operation(BaseOperation):
@@ -293,3 +321,4 @@ class Operation(BaseOperation):
         if getattr(self.navigation, '登录页').login_by_account(username, password):
             self.navigation.page_tree.change_weight('我的页', '登录页', 999)
 ```
+
