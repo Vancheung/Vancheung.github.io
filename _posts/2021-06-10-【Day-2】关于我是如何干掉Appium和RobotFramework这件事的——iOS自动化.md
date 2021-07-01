@@ -22,7 +22,7 @@ typora-root-url: ../../vancheung.github.io
 
 ​	简单介绍下WDA原理，WebDriverAgent作为一个xcporject，在Mac OS执行编译，会将一个WebDriverAgentRunner应用部署到被测设备上，同时在设备上开启一个监听端口，监听HTTP请求。使用任意一个可以发送HTTP请求的语言，都可以和设备上的WebDriverAgentRunner进行通信。WebDriverAgentRunner通过调用iOS提供的XCTest和Accessibility API进行自动化。
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=NzJmNTgxYjYwZjk5MmFjODYxNzllOGJlM2MzMTU1Y2ZfMEg3alFvRUlscm03aUtsNVJzeWxpemJWWDZXc200TTJfVG9rZW46Ym94Y25tc25BVU1Gdm9UZ0RjWEhITzd3cWhnXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174326651](/assets/img/image-20210701174326651.png)
 
 （图源TesterHome）
 
@@ -56,41 +56,41 @@ open WebDriverAgent.xcodeproj
 
 ​	打开项目后修改Scheme为WebDriverAgentRunner：
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=ZTVhZmMwYmZmODlmMmE5M2U1MDZmZjY1ODY1OTE0N2JfMlJ6Uk05Z0Z3MFAwYldHcXJnZGh4eVE4RVY2VnZWa0hfVG9rZW46Ym94Y25jblhmUTN2bXBFaDh6cnZaQU5pcTVnXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174345415](/assets/img/image-20210701174345415.png)
 
 ​	虚拟机编译不需要有效的Apple账户，直接选择一个已安装的虚拟机，Product-Test即可。
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=YTg2YjVhZWQwNmZhZjIxY2I2Yzc2YjBhNzliNDJjMjJfc0tiN1A4NW9RakU3TjhCQ2d0UmhhbnBsc3JDUG50bVZfVG9rZW46Ym94Y25HSXA5Y1pjMmI2MnZheXBvcE4zdkxoXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174409838](/assets/img/image-20210701174409838.png)
 
 ​	编译成功后会启动一个URL，对于虚拟机来说，IP为Mac的IP，PORT在此文件中被指定，默认为8100。
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=MGViNGMwYjAxNmNkMGE2MDczMjQwN2U2MTNjNWFlNjRfVVk1ZUI2UkNNWWxWaWQyZUtyT3RTY1lVRVBtU2RPbkpfVG9rZW46Ym94Y251N0c3QU5KTDJ6YkxMMHlINGhtcExnXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174421362](/assets/img/image-20210701174421362.png)
 
 ​	在通过命令行构建时可以使用USE_PORT字段来指定此模拟器对应的WDARunner端口。
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=NjBjNWQ3YjMxMWJiNWNlZjQ0MTNlNWJkYjc2NDIwZGJfbGUxd1BDQkdlQ3NuSVBMVGtTZVBWQ2I3UGw3RUt3eFhfVG9rZW46Ym94Y25mNzNHcEM5TXF5b1pNcnRpMEZvMTFnXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174438054](/assets/img/image-20210701174438054.png)
 
 ​	控制台能打印如下内容，且在浏览器中访问 [http://localhost:8100/](https://link.zhihu.com/?target=http://localhost:8100/) （8100需要改为实际使用的端口）能够正常打印Json内容，即为启动成功。
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=ZTJkOGQxMjc1ODRiOTU4NThjNWMzODQyNjlkMjExNDhfQVhpeXRNc2xIRGJvVEZQTVZqNTN3bVJjZkUwNUl3dXhfVG9rZW46Ym94Y25NNkZFeHkyd21YMzRCTVdJandUOXlkXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174457109](/assets/img/image-20210701174457109.png)
 
 ​	真机编译需要准备一个苹果开发者账户，免费账户有设备数和编译项目数的限制，最好是准备个人开发者账户。
 
 ​	首先，修改Product Bundle Identifier为自定义的且唯一的Bundle ID，不能与Apple已记录的项目重复。
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=NjIzODQ1NTlkMThjYTg3NzViMGNlYzA2OTdlOWI2OTJfRHN6UDc1QTY0alJYOTNKb3lMdXkyRkxlYzFTNkREM2xfVG9rZW46Ym94Y25INzNHNGFpR1hPNjRJUGVhRmZzREJoXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174509518](/assets/img/image-20210701174509518.png)
 
 ​	修改Sign & Capabilities，选择Add Account
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=NWU2MDFlMjdiOTIxODEyMzNjYmQ4YzRjYTVmOGRlOWFfZFozeVZqOEFZZHpEdjdzTVNXdk02WjZETUduMlZMbkdfVG9rZW46Ym94Y253d2lZQWptVW5YVGtJZk0zQkFEZXhiXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174521988](/assets/img/image-20210701174521988.png)
 
 ​	登录自己的开发者账户
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=MmMyZGRmY2ExZWIwYTIzOTY2YmI5Y2JmZmE3Nzg2YWZfTmNqaVQ5aFJ3YmhOQ0VVNFlUZk10NjBQNzlTdXB5V1hfVG9rZW46Ym94Y253YzVLZWhjdXFSa2NFc0F3ZHFocTFjXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174540856](/assets/img/image-20210701174540856.png)
 
 ​	回到Sign & Capabilities，选择已登录的账户，无报错即可编译，后续操作与模拟器编译相同。
 
-![img](https://mt7z4ki33y.feishu.cn/space/api/box/stream/download/asynccode/?code=ZDUyNGJiZjg4NzQxNWIxMjQ5MDVlN2E5MGU1M2RiMDdfQ3VkTnB2NlB2UFJLU0VZWVVQQ1dOcktJZWNzWUw2Mm9fVG9rZW46Ym94Y24yb3p5OURhc3VCM0lXYUE2bDY0eWVnXzE2MjM3NDQ4OTg6MTYyMzc0ODQ5OF9WNA)
+![image-20210701174552046](/assets/img/image-20210701174552046.png)
 
 #### 使用python-wda
 
