@@ -462,3 +462,102 @@ def find_matches_new(self, elements: List[Element], **kwargs):
         result[name] = find_e
     return result
 ```
+
+（4）智能查找元素，用于已知信息查不到对应元素时。在弹窗查找、当前页判断等处设置smart=False，不启用智能查找。
+
+```python
+    def find_element_new(self, element: FtElement = None, **kwargs):
+        """
+        优化后的元素查找。
+        """
+        timeout = kwargs.pop('timeout') if 'timeout' in kwargs else 1.0
+        order = kwargs.pop('order') if 'order' in kwargs else 1
+        retry = kwargs.pop('retry') if 'retry' in kwargs else 1
+        smart = kwargs.pop('smart') if 'smart' in kwargs else True
+
+        if element:
+            kwargs = element.find
+        s = self.wda_client(**kwargs)
+        find_s = s.get(timeout=timeout, retry=retry, raise_error=False, order=order)
+        if not smart or find_s:
+            return find_s
+        return self.smart_find_element(**kwargs)
+      
+	def smart_find_element(self, **kwargs):
+        """
+        智能查找元素。当find_element查不到时使用.
+        (1)去除order
+        (2)逐步扩大层级至50。 +1、2、4、8、16
+        (3)label->labelContains，name->nameContains,value->valueContains
+        (4)排列组合参数，逐渐减少参数个数
+        (5)raise FindElementError
+        """
+
+        if 'order' in kwargs:
+            kwargs.pop('order')
+        s = self.wda_client(**kwargs)
+
+        if s.find_element_ids():
+            logger.warning('old order is not correct, real order=1')
+            return s.get(timeout=1.0, retry=1, raise_error=False)
+
+        if self._expand_depth_find(s):
+            return s.get(timeout=1.0, retry=1, raise_error=False)
+
+        try_contains = self._expand_contains_find(**kwargs)
+        if try_contains:
+            s = self.wda_client(**try_contains)
+            return s.get(timeout=1.0, retry=1, raise_error=False)
+
+        try_combine = self._combine_find(**kwargs)
+        if try_combine:
+            s = self.wda_client(**try_combine)
+            return s.get(timeout=1.0, retry=1, raise_error=False)
+
+        raise FindElementError('smart find element fail')
+    
+    def _check_exist(self, **kwargs):
+        try_s = self.wda_client(**kwargs)
+        if try_s.find_element_ids():
+            return True
+        return False
+
+    def _expand_depth_find(self, selector):
+        old_depth = self.get_snapshot_max_depth()
+        depth = old_depth
+        for i in range(6):
+            depth += 1 << i
+            if depth > 50:
+                break
+            self.set_snapshot_max_depth(depth)
+            if selector.find_element_ids():
+                logger.warning('old depth is not correct, real depth = [%s]', str(depth))
+                self.set_snapshot_max_depth(old_depth)
+                return True
+        self.set_snapshot_max_depth(old_depth)
+        return False
+
+    def _expand_contains_find(self, **kwargs):
+        if 'label' in kwargs:
+            kwargs['labelContains'] = kwargs.pop('label')
+        if 'name' in kwargs:
+            kwargs['nameContains'] = kwargs.pop('name')
+        if 'value' in kwargs:
+            kwargs['valueContains'] = kwargs.pop('value')
+        if self._check_exist(**kwargs):
+            logger.warning('label not matches, change to labelContains')
+            return kwargs
+        return None
+
+    def _combine_find(self, **kwargs):
+        for i in range(len(kwargs) - 1, 0, -1):
+            for c in combinations(kwargs.keys(), i):
+                new_kwargs = {}
+                for new_key in c:
+                    new_kwargs[new_key] = kwargs[new_key]
+                if self._check_exist(**new_kwargs):
+                    logger.warning('old param is too much, reserve [%s]', c)
+                    return new_kwargs
+        return None
+```
+
