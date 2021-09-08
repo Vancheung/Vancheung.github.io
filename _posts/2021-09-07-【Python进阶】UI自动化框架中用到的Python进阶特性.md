@@ -1,10 +1,11 @@
 ---
-title: 【Python进阶】UI自动化框架中用到的Python进阶特性
+title:【Python进阶】UI自动化框架中用到的Python进阶特性
 date: 2021-09-07 14:00:00 +/-TTTT
 categories: [Python编程,Python基础]
 tags: [python,旧文搬运]
 typora-copy-images-to: ../assets/img
 ---
+
 
 ## 一、抽象类
 
